@@ -27,8 +27,8 @@ class SUUnarchiverTest: XCTestCase
         let tempArchiveURL = tempDirectoryURL.appendingPathComponent(archiveResourceURL.lastPathComponent)
         let extractedAppURL = tempDirectoryURL.appendingPathComponent(appName).appendingPathExtension("app")
         
-        self.unarchiveTestSuccessAppWithExtension(archiveExtension, appName: appName, tempDirectoryURL: tempDirectoryURL, tempArchiveURL: tempArchiveURL, archiveResourceURL: archiveResourceURL, password: password, testExpectation: unarchivedSuccessExpectation);
-        self.unarchiveTestFailureAppWithExtension(archiveExtension, tempDirectoryURL: tempDirectoryURL, password: password, testExpectation: unarchivedFailureExpectation);
+        self.unarchiveTestSuccessAppWithExtension(archiveExtension, appName: appName, tempDirectoryURL: tempDirectoryURL, tempArchiveURL: tempArchiveURL, archiveResourceURL: archiveResourceURL, password: password, testExpectation: unarchivedSuccessExpectation)
+        self.unarchiveTestFailureAppWithExtension(archiveExtension, tempDirectoryURL: tempDirectoryURL, password: password, testExpectation: unarchivedFailureExpectation)
         
         super.waitForExpectations(timeout: 7.0, handler: nil)
         
@@ -38,13 +38,13 @@ class SUUnarchiverTest: XCTestCase
     }
     
     func unarchiveTestFailureAppWithExtension(_ archiveExtension: String, tempDirectoryURL: URL, password: String?, testExpectation: XCTestExpectation) {
-        let tempArchiveURL = tempDirectoryURL.appendingPathComponent("error-invalid").appendingPathExtension(archiveExtension);
+        let tempArchiveURL = tempDirectoryURL.appendingPathComponent("error-invalid").appendingPathExtension(archiveExtension)
         let unarchiver = SUUnarchiver.unarchiver(forPath: tempArchiveURL.path, updatingHostBundlePath: nil, decryptionPassword: password)!
         
         unarchiver.unarchive(completionBlock: {(error: Error?) -> Void in
-            XCTAssertNotNil(error);
+            XCTAssertNotNil(error)
             testExpectation.fulfill()
-        }, progressBlock: nil);
+        }, progressBlock: nil)
     }
     
     func unarchiveTestSuccessAppWithExtension(_ archiveExtension: String, appName: String, tempDirectoryURL: URL, tempArchiveURL: URL, archiveResourceURL: URL, password: String?, testExpectation: XCTestExpectation) {
@@ -56,9 +56,9 @@ class SUUnarchiverTest: XCTestCase
         let unarchiver = SUUnarchiver.unarchiver(forPath: tempArchiveURL.path, updatingHostBundlePath: nil, decryptionPassword: password)!
         
         unarchiver.unarchive(completionBlock: {(error: Error?) -> Void in
-            XCTAssertNil(error);
+            XCTAssertNil(error)
             testExpectation.fulfill()
-        }, progressBlock: nil);
+        }, progressBlock: nil)
     }
     
     func testUnarchivingZip()

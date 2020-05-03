@@ -30,7 +30,7 @@ class SPUDownloaderTestDelegate: NSObject, SPUDownloaderDelegate {
     
     func downloaderDidFailWithError(_ error: Error)
     {
-        XCTFail(error.localizedDescription);
+        XCTFail(error.localizedDescription)
         self.asyncExpectation?.fulfill()
     }
     

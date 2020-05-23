@@ -10,31 +10,31 @@ import Foundation
 import Security
 
 func findKeyPair() -> Data? {
-    var item: CFTypeRef?;
+    var item: CFTypeRef?
     let res = SecItemCopyMatching([
         kSecClass as String: kSecClassGenericPassword,
         kSecAttrService as String: "https://sparkle-project.org",
         kSecAttrAccount as String: "ed25519",
         kSecAttrProtocol as String: kSecAttrProtocolSSH,
         kSecReturnData as String: kCFBooleanTrue,
-    ] as CFDictionary, &item);
+    ] as CFDictionary, &item)
     if res == errSecSuccess, let encoded = item as? Data, let keys = Data(base64Encoded: encoded) {
-        print("OK! Read the existing key saved in the Keychain.");
+        print("OK! Read the existing key saved in the Keychain.")
         return keys
     }
     else if res == errSecItemNotFound {
-        return nil;
+        return nil
     }
     else if res == errSecAuthFailed {
-        print("\nERROR! Access denied. Can't check existing keys in the keychain.");
-        print("Go to Keychain Access.app, lock the login keychain, then unlock it again.");
+        print("\nERROR! Access denied. Can't check existing keys in the keychain.")
+        print("Go to Keychain Access.app, lock the login keychain, then unlock it again.")
     }
     else if res == errSecUserCanceled {
-        print("\nABORTED! You've cancelled the request to read the key from the Keychain. Please run the tool again.");
+        print("\nABORTED! You've cancelled the request to read the key from the Keychain. Please run the tool again.")
     } else if res == errSecInteractionNotAllowed {
-        print("\nERROR! The operating system has blocked access to the Keychain.");
+        print("\nERROR! The operating system has blocked access to the Keychain.")
     } else {
-        print("\nERROR! Unable to access existing item in the Keychain", res, "(you can look it up at osstatus.com)");
+        print("\nERROR! Unable to access existing item in the Keychain", res, "(you can look it up at osstatus.com)")
     }
     exit(1)
 }
@@ -45,22 +45,22 @@ func findPublicKey() -> Data? {
 }
 
 func generateKeyPair() -> Data {
-    var seed = Data(count: 32);
-    var publicEdKey = Data(count: 32);
-    var privateEdKey = Data(count: 64);
+    var seed = Data(count: 32)
+    var publicEdKey = Data(count: 32)
+    var privateEdKey = Data(count: 64)
 
     if !seed.withUnsafeMutableBytes({ (seed: UnsafeMutablePointer<UInt8>) in 0 == ed25519_create_seed(seed)}) {
-        print("\nERROR: Unable to initialize random seed");
+        print("\nERROR: Unable to initialize random seed")
         exit(1)
     }
 
     seed.withUnsafeBytes({(seed: UnsafePointer<UInt8>) in
         publicEdKey.withUnsafeMutableBytes({(publicEdKey: UnsafeMutablePointer<UInt8>) in
             privateEdKey.withUnsafeMutableBytes({(privateEdKey: UnsafeMutablePointer<UInt8>) in
-                ed25519_create_keypair(publicEdKey, privateEdKey, seed);
-            });
-        });
-    });
+                ed25519_create_keypair(publicEdKey, privateEdKey, seed)
+            })
+        })
+    })
 
     let bothKeys = privateEdKey + publicEdKey; // public key can't be derived from the private one
     let query = [
@@ -76,21 +76,21 @@ func generateKeyPair() -> Data {
         kSecAttrLabel as String: "Private key for signing Sparkle updates",
         kSecAttrComment as String: "Public key (SUPublicEDKey value) for this key is:\n\n\(publicEdKey.base64EncodedString())",
         kSecAttrDescription as String: "private key",
-        ] as CFDictionary;
-    let res = SecItemAdd(query, nil);
+        ] as CFDictionary
+    let res = SecItemAdd(query, nil)
 
     if res == errSecSuccess {
-        print("OK! A new key has been generated and saved in the Keychain.");
+        print("OK! A new key has been generated and saved in the Keychain.")
     }
     else if res == errSecDuplicateItem {
-        print("\nERROR: You already have a previously generated key in the Keychain");
+        print("\nERROR: You already have a previously generated key in the Keychain")
     } else if res == errSecAuthFailed {
-        print("\nERROR: System denied access to the Keychain. Unable to save the new key");
-        print("Go to Keychain Access.app, lock the login keychain, then unlock it again.");
+        print("\nERROR: System denied access to the Keychain. Unable to save the new key")
+        print("Go to Keychain Access.app, lock the login keychain, then unlock it again.")
     } else {
-        print("\nERROR: The key could not be saved to the Keychain. error: \(res) (you can look it up at osstatus.com)");
+        print("\nERROR: The key could not be saved to the Keychain. error: \(res) (you can look it up at osstatus.com)")
     }
-    exit(1);
+    exit(1)
 }
 
 func createNewKeychain(withKeyPair bothKeys: Data) -> Bool {
@@ -118,7 +118,7 @@ func createNewKeychain(withKeyPair bothKeys: Data) -> Bool {
         kSecAttrDescription as String: "private key",
 
         kSecUseKeychain as String: keychain!
-        ] as CFDictionary;
+        ] as CFDictionary
 
     guard SecItemAdd(query, nil) == errSecSuccess else {
         print("Counldn't add keychain item to new keychain.")
@@ -139,6 +139,6 @@ if exporting {
         print("Copied key data to 'sparkle_export.keychain'.")
     }
 } else {
-    let pubKey = findPublicKey() ?? generateKeyPair();
+    let pubKey = findPublicKey() ?? generateKeyPair()
     print("\nIn your app's Info.plist set SUPublicEDKey to:\n\(pubKey.base64EncodedString())\n")
 }

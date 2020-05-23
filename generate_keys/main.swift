@@ -9,7 +9,7 @@
 import Foundation
 import Security
 
-func findPublicKey() -> Data? {
+func findKeyPair() -> Data? {
     var item: CFTypeRef?;
     let res = SecItemCopyMatching([
         kSecClass as String: kSecClassGenericPassword,
@@ -20,7 +20,7 @@ func findPublicKey() -> Data? {
     ] as CFDictionary, &item);
     if res == errSecSuccess, let encoded = item as? Data, let keys = Data(base64Encoded: encoded) {
         print("OK! Read the existing key saved in the Keychain.");
-        return keys[64...]
+        return keys
     }
     else if res == errSecItemNotFound {
         return nil;
@@ -37,6 +37,11 @@ func findPublicKey() -> Data? {
         print("\nERROR! Unable to access existing item in the Keychain", res, "(you can look it up at osstatus.com)");
     }
     exit(1)
+}
+
+func findPublicKey() -> Data? {
+    guard let keyPair = findKeyPair() else { return nil }
+    return keyPair[64...]
 }
 
 func generateKeyPair() -> Data {
@@ -88,7 +93,52 @@ func generateKeyPair() -> Data {
     exit(1);
 }
 
+func createNewKeychain(withKeyPair bothKeys: Data) -> Bool {
+    let currentDirectory = FileManager.default.currentDirectoryPath
+    let keychainPath = currentDirectory.appending("/sparkle_export.keychain")
+
+    var keychain: SecKeychain?
+    guard SecKeychainCreate(keychainPath, 0, nil, true, nil, &keychain) == errSecSuccess else {
+        print("Couldn't create new keychain.")
+        return false
+    }
+
+    let query = [
+        // macOS doesn't support ed25519 keys, so we're forced to save the key as a "password"
+        // and add some made-up service data for it to prevent it clashing with other passwords.
+        kSecClass as String: kSecClassGenericPassword,
+        kSecAttrService as String: "https://sparkle-project.org",
+        kSecAttrAccount as String: "ed25519",
+
+        kSecValueData as String: bothKeys.base64EncodedData() as CFData, // it's base64-encoded, because user may request to show it
+        kSecAttrIsSensitive as String: kCFBooleanTrue,
+        kSecAttrIsPermanent as String: kCFBooleanTrue,
+        kSecAttrLabel as String: "Private key for signing Sparkle updates",
+        kSecAttrComment as String: "Public key (SUPublicEDKey value) for this key is:\n\n\(bothKeys[64...].base64EncodedString())",
+        kSecAttrDescription as String: "private key",
+
+        kSecUseKeychain as String: keychain!
+        ] as CFDictionary;
+
+    guard SecItemAdd(query, nil) == errSecSuccess else {
+        print("Counldn't add keychain item to new keychain.")
+        return false
+    }
+
+    return true
+}
+
+let exporting = CommandLine.arguments.firstIndex(of: "-e") != nil
+
 print("This tool uses macOS Keychain to store the Sparkle private key.")
 print("If the Keychain prompts you for permission, please allow it.")
-let pubKey = findPublicKey() ?? generateKeyPair();
-print("\nIn your app's Info.plist set SUPublicEDKey to:\n\(pubKey.base64EncodedString())\n")
+
+if exporting {
+    if let keyPair = findKeyPair() {
+        guard createNewKeychain(withKeyPair: keyPair) else { exit(1) }
+        print("Copied key data to 'sparkle_export.keychain'.")
+    }
+} else {
+    let pubKey = findPublicKey() ?? generateKeyPair();
+    print("\nIn your app's Info.plist set SUPublicEDKey to:\n\(pubKey.base64EncodedString())\n")
+}

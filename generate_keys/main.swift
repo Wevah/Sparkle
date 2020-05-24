@@ -9,6 +9,10 @@
 import Foundation
 import Security
 
+func messageForSecError(_ err: OSStatus) -> String {
+    return SecCopyErrorMessageString(err, nil) as String? ?? "\(err) (you can look it up at osstatus.com)"
+}
+
 func findKeyPair() -> Data? {
     var item: CFTypeRef?
     let res = SecItemCopyMatching([
@@ -34,7 +38,7 @@ func findKeyPair() -> Data? {
     } else if res == errSecInteractionNotAllowed {
         print("\nERROR! The operating system has blocked access to the Keychain.")
     } else {
-        print("\nERROR! Unable to access existing item in the Keychain", res, "(you can look it up at osstatus.com)")
+        print("\nERROR! Unable to access existing item in the Keychain:", messageForSecError(res))
     }
     exit(1)
 }
@@ -125,6 +129,8 @@ func createNewKeychain(withKeyPair bothKeys: Data, named name: String = "sparkle
         print("\nERROR: Couldn't create new keychain.")
         if res == errSecDuplicateKeychain {
             print("       File already exists at \(finalName)")
+        } else {
+            print("       \(messageForSecError(res))")
         }
         exit(1)
     }

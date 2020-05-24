@@ -102,7 +102,7 @@ func absolutePathForPath(_ path: String) -> String {
     return currentDirectory.appendingFormat("/%@", path)
 }
 
-func createNewKeychain(withKeyPair bothKeys: Data, named name: String = "sparkle_export") -> Bool {
+func createNewKeychain(withKeyPair bothKeys: Data, named name: String = "sparkle_export") {
     var keychainPath = absolutePathForPath(name)
     var finalName = name
 
@@ -126,7 +126,7 @@ func createNewKeychain(withKeyPair bothKeys: Data, named name: String = "sparkle
         if res == errSecDuplicateKeychain {
             print("       File already exists at \(finalName)")
         }
-        return false
+        exit(1)
     }
 
     let query = [
@@ -148,12 +148,10 @@ func createNewKeychain(withKeyPair bothKeys: Data, named name: String = "sparkle
 
     guard SecItemAdd(query, nil) == errSecSuccess else {
         print("Couldn't add keychain item to new keychain.")
-        return false
+        exit(1)
     }
 
     print("Copied key to \(finalName).")
-
-    return true
 }
 
 if CommandLine.arguments.firstIndex(of: "-h") != nil || CommandLine.arguments.firstIndex(of: "--help") != nil {
@@ -183,7 +181,7 @@ if let exportFlagIndex = CommandLine.arguments.firstIndex(of: "-e") {
     }
 
     if let keyPair = findKeyPair() {
-        guard createNewKeychain(withKeyPair: keyPair, named: name) else { exit(1) }
+        createNewKeychain(withKeyPair: keyPair, named: name)
     }
 } else {
     let pubKey = findPublicKey() ?? generateKeyPair()

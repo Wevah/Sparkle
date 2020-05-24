@@ -122,9 +122,9 @@ func createNewKeychain(withKeyPair bothKeys: Data, named name: String = "sparkle
     var keychain: SecKeychain?
     let res = SecKeychainCreate(keychainPath, 0, nil, true, nil, &keychain)
     if res != errSecSuccess {
-        print("Couldn't create new keychain.")
+        print("\nERROR: Couldn't create new keychain.")
         if res == errSecDuplicateKeychain {
-            print("File already exists at \(finalName)")
+            print("       File already exists at \(finalName)")
         }
         return false
     }
@@ -151,7 +151,7 @@ func createNewKeychain(withKeyPair bothKeys: Data, named name: String = "sparkle
         return false
     }
 
-    print("Copied keys to \(finalName).")
+    print("Copied key to \(finalName).")
 
     return true
 }

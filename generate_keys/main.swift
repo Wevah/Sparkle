@@ -93,13 +93,39 @@ func generateKeyPair() -> Data {
     exit(1)
 }
 
-func createNewKeychain(withKeyPair bothKeys: Data) -> Bool {
+func absolutePathForPath(_ path: String) -> String {
+    if path.hasPrefix("/") {
+        return path
+    }
+
     let currentDirectory = FileManager.default.currentDirectoryPath
-    let keychainPath = currentDirectory.appending("/sparkle_export.keychain")
+    return currentDirectory.appendingFormat("/%@", path)
+}
+
+func createNewKeychain(withKeyPair bothKeys: Data, named name: String = "sparkle_export") -> Bool {
+    var keychainPath = absolutePathForPath(name)
+    var finalName = name
+
+    let url = URL(fileURLWithPath: keychainPath)
+    if let values = try? url.resourceValues(forKeys: [.isDirectoryKey]) {
+        if values.isDirectory! {
+            finalName.append("/sparkle_export")
+            keychainPath.append("/sparkle_export")
+        }
+    }
+
+    if !keychainPath.hasSuffix(".keychain") && !keychainPath.hasSuffix(".keychain-db") {
+        finalName.append(".keychain")
+        keychainPath.append(".keychain")
+    }
 
     var keychain: SecKeychain?
-    guard SecKeychainCreate(keychainPath, 0, nil, true, nil, &keychain) == errSecSuccess else {
+    let res = SecKeychainCreate(keychainPath, 0, nil, true, nil, &keychain)
+    if res != errSecSuccess {
         print("Couldn't create new keychain.")
+        if res == errSecDuplicateKeychain {
+            print("File already exists at \(finalName)")
+        }
         return false
     }
 
@@ -121,22 +147,43 @@ func createNewKeychain(withKeyPair bothKeys: Data) -> Bool {
         ] as CFDictionary
 
     guard SecItemAdd(query, nil) == errSecSuccess else {
-        print("Counldn't add keychain item to new keychain.")
+        print("Couldn't add keychain item to new keychain.")
         return false
     }
+
+    print("Copied keys to \(finalName).")
 
     return true
 }
 
-let exporting = CommandLine.arguments.firstIndex(of: "-e") != nil
+if CommandLine.arguments.firstIndex(of: "-h") != nil || CommandLine.arguments.firstIndex(of: "--help") != nil {
+    print("""
+Usage: generate_keys
+       generate_keys -e [file]
+
+       Without the -e flag, generates a public/private Ed25519 key pair and stores it in the keychain,
+       and prints the Base-64-encoded public key, or simply prints the public key if the keys already
+       exist in the keychain.
+
+       With the -e flag, exports an already saved keychain to the specified keychain file, defaulting
+       to "sparkle_export.keychain" in the current directory.
+""")
+    exit(0)
+}
 
 print("This tool uses macOS Keychain to store the Sparkle private key.")
 print("If the Keychain prompts you for permission, please allow it.")
 
-if exporting {
+
+if let exportFlagIndex = CommandLine.arguments.firstIndex(of: "-e") {
+    var name = "sparkle_export"
+
+    if exportFlagIndex < CommandLine.argc - 1 {
+        name = CommandLine.arguments[exportFlagIndex + 1]
+    }
+
     if let keyPair = findKeyPair() {
-        guard createNewKeychain(withKeyPair: keyPair) else { exit(1) }
-        print("Copied key data to 'sparkle_export.keychain'.")
+        guard createNewKeychain(withKeyPair: keyPair, named: name) else { exit(1) }
     }
 } else {
     let pubKey = findPublicKey() ?? generateKeyPair()

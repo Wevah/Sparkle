@@ -53,7 +53,7 @@ func generateKeyPair() -> Data {
     var publicEdKey = Data(count: 32)
     var privateEdKey = Data(count: 64)
 
-    if !seed.withUnsafeMutableBytes({ (seed: UnsafeMutablePointer<UInt8>) in 0 == ed25519_create_seed(seed)}) {
+    if !seed.withUnsafeMutableBytes { (seed: UnsafeMutablePointer<UInt8>) in 0 == ed25519_create_seed(seed)} {
         print("\nERROR: Unable to initialize random seed")
         exit(1)
     }
@@ -85,8 +85,7 @@ func generateKeyPair() -> Data {
 
     if res == errSecSuccess {
         print("OK! A new key has been generated and saved in the Keychain.")
-    }
-    else if res == errSecDuplicateItem {
+    } else if res == errSecDuplicateItem {
         print("\nERROR: You already have a previously generated key in the Keychain")
     } else if res == errSecAuthFailed {
         print("\nERROR: System denied access to the Keychain. Unable to save the new key")
